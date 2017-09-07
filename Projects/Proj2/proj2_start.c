@@ -82,15 +82,15 @@ void printInstruction(unsigned int);
 
 int main(){
     run();
-    return(0); 
+    return(0);
 }
 
 void run(){
 
-  stateType state;           /* Contains the state of the entire pipeline before the cycle executes */ 
+  stateType state;           /* Contains the state of the entire pipeline before the cycle executes */
   stateType newState;        /* Contains the state of the entire pipeline after the cycle executes */
   initState(&state);         /* Initialize the state of the pipeline */
-    
+
     while (1) {
 
         printState(&state);
@@ -109,18 +109,21 @@ void run(){
 	/* Modify newState stage-by-stage below to reflect the state of the pipeline after the cycle has executed */
 
         /* --------------------- IF stage --------------------- */
-        
-
-        /* --------------------- ID stage --------------------- */       
-
-
-        /* --------------------- EX stage --------------------- */
-
-
-        /* --------------------- MEM stage --------------------- */
-
+        newState.PC = state.PC + 4;
+        newState.IFID.instr = state.instrMem[state.PC/4];
 
         /* --------------------- WB stage --------------------- */
+        // wb stuff
+
+
+        /* --------------------- ID stage --------------------- */
+        newState.IDEX.instr = state.IFID.instr;
+
+        /* --------------------- EX stage --------------------- */
+        newState.EXMEM.instr = state.IDEX.instr;
+
+        /* --------------------- MEM stage --------------------- */
+        newState.MEMWB.instr = state.EXMEM.instr;
 
 
         state = newState;    /* The newState now becomes the old state before we execute the next cycle */
@@ -129,7 +132,7 @@ void run(){
 
 
 /******************************************************************/
-/* The initState function accepts a pointer to the current        */ 
+/* The initState function accepts a pointer to the current        */
 /* state as an argument, initializing the state to pre-execution  */
 /* state. In particular, all registers are zero'd out. All        */
 /* instructions in the pipeline are NOOPS. Data and instruction   */
@@ -144,7 +147,7 @@ void initState(stateType *statePtr)
     char line[130];
     char instr[5];
     char args[130];
-    char* arg; 
+    char* arg;
 
     statePtr->PC = 0;
     statePtr->cycles = 0;
@@ -157,20 +160,20 @@ void initState(stateType *statePtr)
     /* Parse assembly file and initialize data/instruction memory */
     while(fgets(line, 130, stdin)){
         if(sscanf(line, "\t.%s %s", instr, args) == 2){
-	 
+
             arg = strtok(args, ",");
             while(arg != NULL){
                 statePtr->dataMem[data_index] = atoi(arg);
                 data_index += 1;
-                arg = strtok(NULL, ","); 
-            }  
+                arg = strtok(NULL, ",");
+            }
         }
         else if(sscanf(line, "\t%s %s", instr, args) == 2){
             dec_inst = instrToInt(instr, args);
             statePtr->instrMem[inst_index] = dec_inst;
             inst_index += 1;
         }
-    } 
+    }
 
     /* Zero-out all registers in pipeline to start */
     statePtr->IFID.instr = 0;
@@ -184,7 +187,7 @@ void initState(stateType *statePtr)
     statePtr->IDEX.rsReg = 0;
     statePtr->IDEX.rtReg = 0;
     statePtr->IDEX.rdReg = 0;
- 
+
     statePtr->EXMEM.instr = 0;
     statePtr->EXMEM.aluResult = 0;
     statePtr->EXMEM.writeDataReg = 0;
@@ -216,12 +219,12 @@ void printState(stateType *statePtr)
     printf("\tPC = %d\n", statePtr->PC);
     printf("\tData Memory:\n");
     for (i=0; i<(NUMMEMORY/2); i++) {
-        printf("\t\tdataMem[%d] = %d\t\tdataMem[%d] = %d\n", 
+        printf("\t\tdataMem[%d] = %d\t\tdataMem[%d] = %d\n",
             i, statePtr->dataMem[i], i+(NUMMEMORY/2), statePtr->dataMem[i+(NUMMEMORY/2)]);
     }
     printf("\tRegisters:\n");
     for (i=0; i<(NUMREGS/2); i++) {
-        printf("\t\tregFile[%d] = %d\t\tregFile[%d] = %d\n", 
+        printf("\t\tregFile[%d] = %d\t\tregFile[%d] = %d\n",
             i, statePtr->regFile[i], i+(NUMREGS/2), statePtr->regFile[i+(NUMREGS/2)]);
     }
     printf("\tIF/ID:\n");
@@ -266,14 +269,14 @@ unsigned int instrToInt(char* inst, char* args){
 
     int opcode, rs, rt, rd, shamt, funct, immed;
     unsigned int dec_inst;
-    
+
     if((strcmp(inst, "add") == 0) || (strcmp(inst, "sub") == 0)){
         opcode = 0;
         if(strcmp(inst, "add") == 0)
             funct = ADD;
         else
-            funct = SUB; 
-        shamt = 0; 
+            funct = SUB;
+        shamt = 0;
         rd = atoi(strtok(args, ",$"));
         rs = atoi(strtok(NULL, ",$"));
         rt = atoi(strtok(NULL, ",$"));
@@ -292,9 +295,9 @@ unsigned int instrToInt(char* inst, char* args){
         rs = atoi(strtok(args, ",$"));
         rt = atoi(strtok(NULL, ",$"));
         immed = atoi(strtok(NULL, ","));
-        dec_inst = (opcode << 26) + (rs << 21) + (rt << 16) + (immed & 0x0000FFFF);   
+        dec_inst = (opcode << 26) + (rs << 21) + (rt << 16) + (immed & 0x0000FFFF);
     } else if(strcmp(inst, "halt") == 0){
-        opcode = 63; 
+        opcode = 63;
         dec_inst = (opcode << 26);
     } else if(strcmp(inst, "noop") == 0){
         dec_inst = 0;
@@ -362,4 +365,3 @@ void printInstruction(unsigned int instr)
         printf("%s\n", "halt");
     }
 }
-
